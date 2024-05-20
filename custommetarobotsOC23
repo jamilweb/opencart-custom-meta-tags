@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<modification>
+  <id>noindexproduct</id>
+  <name>noindexproduct</name>
+  <code>noindexproduct</code>
+  <version>5.4.1</version>
+  <vqmver>2.5.1</vqmver>
+  <author><![CDATA[<b style="color:#83a411">isabad<b style="color:#5f5f5f">.com</b></b>]]></author>
+  <link>https://isabad.com</link>
+
+  <file path="catalog/view/theme/*/template/common/header.tpl">
+    <operation>
+      <search position="after"><![CDATA[<?php echo $title; ?></title>]]></search>
+      <add position="after"><![CDATA[
+      <?php if ($NoindexMeta) { ?>
+<?php echo $NoindexMeta; ?>
+<?php } ?>
+      ]]></add>
+    </operation>
+  </file>
+  <file path="catalog/controller/common/header.php">
+    <operation>
+      <search position="after"><![CDATA[$data['keywords'] = $this->document->getKeywords();]]></search>
+      <add position="after"><![CDATA[$data['NoindexMeta'] = $this->document->getNoindexMeta();]]></add>
+    </operation>
+  </file>
+  <file path="catalog/controller/product/product.php">
+    <operation>
+      <search position="after"><![CDATA[$data['stockstatus'] = $product_info['stock_status'];]]></search>
+      <add position="after"><![CDATA[$data['noindex_status'] = $product_info['noindex_status'];]]></add>
+    </operation>
+	<operation>
+      <search position="after"><![CDATA[$data['products'][] = array(]]></search>
+      <add position="after"><![CDATA['noindex_status'  => $result['noindex_status'],]]></add>
+    </operation>
+	<operation>
+      <search position="after"><![CDATA[$this->document->setKeywords($product_info['meta_keyword']);]]></search>
+      <add position="after"><![CDATA[
+      if (!empty($product_info['noindex_status']) || ($product_info['noindex_status'] != "NULL")) {
+        $this->document->addNoindexMeta('<meta name="robots" content="'.$product_info['noindex_status'].'" />'."\n");
+      }
+      ]]></add>
+    </operation>
+  </file>
+   <file path="system/library/document.php">
+    <operation>
+      <search position="before"><![CDATA[public function setTitle($title) {]]></search>
+      <add position="before"><![CDATA[
+    private $seo_meta = '';
+
+    public function addNoindexMeta($html) {
+        $this->seo_meta .= $html;
+    }
+        
+    public function getNoindexMeta($html) {
+		return $this->seo_meta;
+	}
+      ]]></add>
+    </operation>
+  </file>
+  
+  <file path="catalog/model/catalog/product.php">
+    <operation>
+      <search position="after"><![CDATA['status'           => $query->row['status']]]></search>
+      <add position="after"><![CDATA['noindex_status'        => $query->row['noindex_status'],]]></add>
+    </operation>
+	<operation>
+      <search position="replace"><![CDATA[AS reviews, p.sort_order]]></search>
+      <add position="replace"><![CDATA[AS reviews, p.sort_order AND p.noindex_status ]]></add>
+    </operation>
+  </file>
+  
+   <file path="admin/controller/catalog/product.php">
+    <operation>
+      <search position="after"><![CDATA[$data['products'][] = array(]]></search>
+      <add position="after"><![CDATA['noindex_status'  => $result['noindex_status'] ? $result['noindex_status'] : 'NULL',]]></add>
+    </operation>
+	<operation>
+      <search position="after"><![CDATA[$this->load->model('localisation/stock_status');]]></search>
+      <add position="after"><![CDATA[
+      if (isset($this->request->post['noindex_status'])) {
+			$data['noindex_status'] = $this->request->post['noindex_status'];
+		} elseif (!empty($product_info)) {
+			$data['noindex_status'] = $product_info['noindex_status'];
+		} else {
+			$data['noindex_status'] = "NULL";
+		}
+      ]]></add>
+    </operation>
+  </file>
+  
+  <file path="admin/model/catalog/product.php">
+    <operation>
+      <search position="after"><![CDATA[$data['status'] = '0';]]></search>
+      <add position="after"><![CDATA[$data['noindex_status'] = 'NULL';]]></add>
+    </operation>
+	<operation>
+      <search position="replace"><![CDATA[status = '" . (int)$data['status'] . "']]></search>
+      <add position="replace"><![CDATA[status = '" . (int)$data['status'] . "', noindex_status = '" . $data['noindex_status'] . "']]></add>
+    </operation>
+  </file>
+  
+  <file path="admin/view/template/catalog/product_form.tpl">
+    <operation>
+      <search position="before" offset="1"><![CDATA[<?php echo $entry_status; ?></label>]]></search>
+      <add position="before" offset="1"><![CDATA[
+      <div class="form-group">
+                <label class="col-sm-2 control-label" for="input-noindex_status">متا ربات</label>
+                <div class="col-sm-10">
+                  <select name="noindex_status" id="input-noindex_status" class="form-control">
+					<option value="NULL" <?php if ($noindex_status == 'NULL') echo 'selected="selected"'; ?>>غیرفعال</option>
+					<option value="INDEX, FOLLOW, MAX-IMAGE-PREVIEW:LARGE, MAX-SNIPPET:-1, MAX-VIDEO-PREVIEW:-1" <?php if ($noindex_status == 'INDEX, FOLLOW, MAX-IMAGE-PREVIEW:LARGE, MAX-SNIPPET:-1, MAX-VIDEO-PREVIEW:-1') echo 'selected="selected"'; ?>>INDEX, FOLLOW, MAX-IMAGE-PREVIEW:LARGE, MAX-SNIPPET:-1, MAX-VIDEO-PREVIEW:-1</option>
+					<option value="all" <?php if ($noindex_status == 'all') echo 'selected="selected"'; ?>>all</option>
+					<option value="index, nofollow" <?php if ($noindex_status == 'index, nofollow') echo 'selected="selected"'; ?>>index, nofollow</option>
+					<option value="noindex, follow" <?php if ($noindex_status == 'noindex, follow') echo 'selected="selected"'; ?>>noindex, follow</option>
+					<option value="noindex" <?php if ($noindex_status == 'noindex') echo 'selected="selected"'; ?>>noindex</option>
+					<option value="nofollow" <?php if ($noindex_status == 'nofollow') echo 'selected="selected"'; ?>>nofollow</option>
+                  </select>
+                </div>
+              </div>
+      ]]></add>
+    </operation>
+  </file>
+  
+</modification>
